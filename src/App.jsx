@@ -19,11 +19,9 @@ function loadProgress() {
   return null;
 }
 
-// 색상 정의
-const ONDOKU_RUBY_COLOR = '#FFFF33';  // 음독 루비 - 노란색
-const KUNDOKU_RUBY_COLOR = '#33FF66'; // 훈독 루비 - 연두색
+const ONDOKU_RUBY_COLOR = '#FFFF33';
+const KUNDOKU_RUBY_COLOR = '#33FF66';
 
-// 단어 단위 루비 컴포넌트 - 단어 전체 위에 읽기 표시
 function RubyWord({ word, reading, rubyColor, revealed, darkMode }) {
   if (!revealed) {
     return (
@@ -47,7 +45,6 @@ function RubyWord({ word, reading, rubyColor, revealed, darkMode }) {
   );
 }
 
-// 예문 아이템 컴포넌트
 function ExampleItem({ ex, revealed, onTap, darkMode, rubyColor }) {
   return (
     <div 
@@ -82,7 +79,6 @@ function FlipCard({ char, isFlipped, onTap, darkMode, revealedReadings, onToggle
   return (
     <div className="cursor-pointer flex-1 min-h-0 my-1" onClick={onTap}>
       {!isFlipped ? (
-        /* 앞면 - 한자만 */
         <div
           className={`w-full h-full rounded-2xl shadow-lg flex items-center justify-center ${
             darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-slate-200'
@@ -96,22 +92,18 @@ function FlipCard({ char, isFlipped, onTap, darkMode, revealedReadings, onToggle
           </span>
         </div>
       ) : (
-        /* 뒷면 */
         <div
           className={`w-full h-full rounded-2xl shadow-lg p-4 overflow-hidden flex flex-col ${
             darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-slate-200'
           }`}
         >
-          {/* 훈음 헤더 */}
           <div className="text-center mb-3 shrink-0">
             <span className={`font-bold ${darkMode ? 'text-amber-400' : 'text-slate-700'}`} style={{ fontSize: '36px' }}>
               {char.korean}
             </span>
           </div>
 
-          {/* 음독/훈독 좌우 대칭 */}
           <div className="flex-1 flex gap-4 min-h-0 overflow-hidden">
-            {/* 음독 (왼쪽) */}
             <div className={`flex-1 ${char.ondoku && char.ondoku !== '-' ? '' : 'opacity-30'}`}>
               <div className={`text-sm font-bold mb-2 text-center ${darkMode ? 'text-rose-400' : 'text-rose-600'}`}>
                 {char.ondoku || '-'}
@@ -133,7 +125,6 @@ function FlipCard({ char, isFlipped, onTap, darkMode, revealedReadings, onToggle
               </div>
             </div>
 
-            {/* 훈독 (오른쪽) */}
             <div className={`flex-1 ${hasKundoku ? '' : 'opacity-30'}`}>
               <div className={`text-sm font-bold mb-2 text-center ${darkMode ? 'text-sky-400' : 'text-sky-600'}`}>
                 {char.kundoku || '-'}
@@ -209,6 +200,33 @@ export default function App() {
     setRevealedReadings({});
   };
 
+  const goToPrevChar = () => {
+    if (selectedChar > 0) {
+      setSelectedChar(selectedChar - 1);
+    } else if (selectedGroup > 0) {
+      const prevGroup = kanjiData[selectedGroup - 1];
+      setSelectedGroup(selectedGroup - 1);
+      setSelectedChar(prevGroup.characters.length - 1);
+    }
+    setIsFlipped(false);
+    setRevealedReadings({});
+  };
+
+  const revealAllReadings = () => {
+    const newRevealed = {};
+    if (currentChar.ondokuEx) {
+      currentChar.ondokuEx.slice(0, 2).forEach((_, i) => {
+        newRevealed[`on-${i}`] = true;
+      });
+    }
+    if (currentChar.kundokuEx && currentChar.kundoku !== '-') {
+      currentChar.kundokuEx.slice(0, 2).forEach((_, i) => {
+        newRevealed[`kun-${i}`] = true;
+      });
+    }
+    setRevealedReadings(newRevealed);
+  };
+
   const handleCharSelect = (index) => {
     setSelectedChar(index);
     setIsFlipped(false);
@@ -250,6 +268,49 @@ export default function App() {
     }
   };
 
+  // ⌨️ 키보드 단축키
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (showGroupList) return;
+
+      switch (e.key) {
+        case 'ArrowRight':
+        case 'Enter':
+          e.preventDefault();
+          goToNextChar();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          goToPrevChar();
+          break;
+        case 'ArrowDown':
+        case ' ':
+          e.preventDefault();
+          if (!isFlipped) {
+            setIsFlipped(true);
+          } else {
+            revealAllReadings();
+          }
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          if (isFlipped) {
+            setIsFlipped(false);
+            setRevealedReadings({});
+          }
+          break;
+        case 'Shift':
+          if (!isFlipped) {
+            setIsFlipped(true);
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFlipped, selectedGroup, selectedChar, showGroupList]);
+
   if (!currentGroup || !currentChar) {
     return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Loading...</div>;
   }
@@ -261,7 +322,6 @@ export default function App() {
     >
       <div className="max-w-lg mx-auto w-full flex flex-col h-full" onClick={e => e.stopPropagation()}>
         
-        {/* 헤더 */}
         <div className="flex justify-between items-center mb-2 shrink-0">
           <div>
             <h1 className={`text-lg font-bold ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
@@ -279,7 +339,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* 진행도 */}
         <div className="mb-2 shrink-0">
           <div className="flex justify-between text-xs mb-1">
             <span className={darkMode ? 'text-slate-500' : 'text-slate-500'}>학습 진도</span>
@@ -295,7 +354,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* 그룹 선택 */}
         <div className="flex items-center gap-2 mb-2 shrink-0">
           <button
             onClick={() => selectedGroup > 0 && handleGroupSelect(selectedGroup - 1)}
@@ -319,7 +377,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* 그룹 목록 */}
         {showGroupList && (
           <div className={`mb-2 max-h-40 overflow-y-auto rounded-lg shrink-0 ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-slate-200'}`}>
             {kanjiData.map((group, idx) => (
@@ -338,7 +395,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 한자 탭 */}
         <div className="flex justify-center gap-2 mb-1 shrink-0 flex-wrap">
           {currentGroup.characters.map((char, idx) => (
             <button
@@ -351,12 +407,11 @@ export default function App() {
               }`}
             >
               {char.kanji}
-              {learned[char.kanji] && <span className="absolute -top-0.5 -right-0.5 text-xs text-emerald-400">✓</span>}
+              {learned[char.kanji] && <span className="absolute -top-0.5 -right-0.5 text-xs text-emerald-400">✔</span>}
             </button>
           ))}
         </div>
 
-        {/* 카드 */}
         <FlipCard
           char={currentChar}
           isFlipped={isFlipped}
@@ -366,8 +421,17 @@ export default function App() {
           onToggleReading={toggleReading}
         />
 
-        {/* 하단 버튼들 */}
         <div className="mt-2 flex gap-2 shrink-0">
+          <button
+            onClick={goToPrevChar}
+            className={`px-4 py-2.5 rounded-lg font-bold text-sm ${
+              selectedGroup === 0 && selectedChar === 0
+                ? 'opacity-30 bg-slate-700 text-slate-400'
+                : darkMode ? 'bg-slate-700 text-slate-200' : 'bg-slate-300 text-slate-700'
+            }`}
+          >
+            ← 이전
+          </button>
           <button
             onClick={goToNextChar}
             className="flex-1 py-2.5 rounded-lg font-bold text-sm bg-emerald-500 text-white"
@@ -382,18 +446,16 @@ export default function App() {
                 : darkMode ? 'bg-slate-700 text-slate-300' : 'bg-slate-200 text-slate-600'
             }`}
           >
-            {learned[currentChar.kanji] ? '✓' : '완료'}
+            {learned[currentChar.kanji] ? '✔' : '완료'}
           </button>
         </div>
 
-        {/* 힌트 */}
         <div className="mt-1 text-center shrink-0">
           <span className={`text-xs ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>
-            {isFlipped ? '카드 탭: 앞면' : '카드 탭: 상세보기'} · 바깥 탭: 다음
+            ←→ 이전/다음 · ↓Space 뒤집기 · ↑ 앞면 · Enter 다음
           </span>
         </div>
 
-        {/* 진행 dots */}
         <div className="mt-1 flex justify-center items-center gap-1 shrink-0">
           {currentGroup.characters.map((char, idx) => (
             <div
